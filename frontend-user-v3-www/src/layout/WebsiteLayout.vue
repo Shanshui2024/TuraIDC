@@ -226,7 +226,15 @@
               :aria-expanded="userMenuOpen"
               @click="toggleUserMenu"
             >
-              <span class="user-avatar-initial">{{ userAvatarInitial }}</span>
+              <img
+                v-if="userAvatarUrl && !userAvatarLoadFailed"
+                :src="userAvatarUrl"
+                class="user-avatar-img"
+                alt=""
+                referrerpolicy="no-referrer"
+                @error="userAvatarLoadFailed = true"
+              />
+              <span v-else class="user-avatar-initial">{{ userAvatarInitial }}</span>
               <span class="header-user-name">{{ userDisplayName }}</span>
               <el-icon class="header-user-arrow"><ArrowDown /></el-icon>
             </button>
@@ -297,7 +305,15 @@
             :aria-expanded="mobileUserMenuOpen"
             @click="toggleMobileUserMenu"
           >
-            <span class="user-avatar-initial">{{ userAvatarInitial }}</span>
+            <img
+              v-if="userAvatarUrl && !userAvatarLoadFailed"
+              :src="userAvatarUrl"
+              class="user-avatar-img"
+              alt=""
+              referrerpolicy="no-referrer"
+              @error="userAvatarLoadFailed = true"
+            />
+            <span v-else class="user-avatar-initial">{{ userAvatarInitial }}</span>
           </button>
           <transition name="user-menu-fade">
             <div v-if="mobileUserMenuOpen" class="user-menu-panel" role="menu">
@@ -831,6 +847,8 @@ const isMobile = ref(
 );
 const logoLoadFailed = ref(false);
 const footerLogoLoadFailed = ref(false);
+// 头像加载失败时置位，回退显示首字母头像
+const userAvatarLoadFailed = ref(false);
 
 const userAvatarInitial = computed(() => {
   if (!userStore.isLoggedIn) return "";
@@ -842,6 +860,24 @@ const userAvatarInitial = computed(() => {
     ""
   ).trim();
   return name ? name.charAt(0).toUpperCase() : "U";
+});
+
+/**
+ * 头像地址来自用户资料，只接受 https 或站内相对路径。
+ * 其余（http 明文、data:、javascript: 等）一律丢弃，避免混合内容与非法协议。
+ */
+function isSafeAvatarUrl(url) {
+  if (!url) return false;
+  if (url.startsWith("//")) return false; // 协议相对地址可能指向任意域名
+  if (url.startsWith("/")) return true; // 站内相对路径
+  return /^https:\/\//i.test(url);
+}
+
+const userAvatarUrl = computed(() => {
+  if (!userStore.isLoggedIn) return "";
+  const info = userStore.info;
+  const url = (info?.avatar || "").trim();
+  return isSafeAvatarUrl(url) ? url : "";
 });
 
 const userDisplayName = computed(() => {
@@ -1500,6 +1536,14 @@ onBeforeUnmount(() => {
     line-height: 1;
   }
 
+  .user-avatar-img {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+  }
+
   .header-user-name {
     font-size: 13px;
     font-weight: 500;
@@ -1656,6 +1700,14 @@ onBeforeUnmount(() => {
   font-weight: 600;
   line-height: 1;
   letter-spacing: 0;
+}
+
+.user-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
 }
 
 // 头部浮在首页 Hero 之上时整条 header 没有任何底色，

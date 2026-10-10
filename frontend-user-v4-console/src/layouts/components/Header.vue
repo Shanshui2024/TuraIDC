@@ -99,7 +99,13 @@
             </template>
             <t-button class="header-user-btn" theme="default" variant="text">
               <template #icon>
-                <t-avatar class="header-user-avatar" size="small">{{ userInitials }}</t-avatar>
+                <t-avatar
+                  class="header-user-avatar"
+                  size="small"
+                  :image="userAvatarImage"
+                  @error="userAvatarLoadFailed = true"
+                  >{{ userInitials }}</t-avatar
+                >
               </template>
               <span class="header-user-account">{{ accountName }}</span>
               <span class="header-user-balance">余额 {{ formattedBalance }}</span>
@@ -241,6 +247,12 @@ const userInitials = computed(() => {
   const name = accountName.value.trim();
   return name.slice(0, 1) || siteBranding.brandInitials || '图';
 });
+const userAvatarUrl = computed(() => String(user.userInfo.avatar || '').trim());
+// 头像加载失败时清空地址，让 t-avatar 回退显示首字母内容，而不是一直转圈/破图
+const userAvatarLoadFailed = ref(false);
+const userAvatarImage = computed(() =>
+  userAvatarLoadFailed.value ? undefined : userAvatarUrl.value || undefined,
+);
 const formattedBalance = computed(() => {
   const value = user.userInfo.cash_balance;
   const amount = Number(value);
@@ -533,14 +545,17 @@ onMounted(() => {
     display: inline-flex;
     align-items: center;
     gap: var(--td-comp-margin-s);
+    /* TDesign 只对 svg 图标补 margin-left，头像不是 svg，这里手动补上与账号名的间距 */
+    margin-left: 10px;
   }
 }
 
-.header-user-avatar {
+// size="small" 对应 24px（.t-avatar.t-size-s），这里用更高优先级的选择器覆盖到 28px
+.header-user-btn .header-user-avatar {
   background: var(--td-brand-color-light);
   color: var(--td-brand-color);
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   flex-shrink: 0;
 }
 
